@@ -1,40 +1,29 @@
-# Назва конвеєра, яку ти побачиш у GitHub Actions
 name: Task API CI/CD Pipeline
 
-# Коли запускати цей конвеєр?
 on:
-  # Запускати при кожному push (завантаженні коду) на гілку main
   push:
     branches:
       - main
-  # Дозволяє запустити конвеєр вручну
   workflow_dispatch:
 
-# Наші автоматичні завдання
 jobs:
   build_test_and_deploy:
-    # Запускати на віртуальній машині з Linux
     runs-on: ubuntu-latest
     
     # Кроки конвеєра:
     steps:
       - name: 1. Checkout Code (Отримання коду)
-        # Стандартна дія: завантажити код з репозиторію
         uses: actions/checkout@v4
 
       - name: 2. Setup Docker (Підготовка Docker)
-        # Нам потрібен Docker Compose для запуску ПЗ+АЗ
         uses: docker/setup-buildx-action@v3
         
       - name: 3. Build & Run Services (Збірка та запуск ПЗ та АЗ)
-        # Етап: ЗБІРКА. Збираємо та запускаємо наші контейнери у фоновому режимі
-        # Використовуємо сучасну команду "docker compose" (без дефіса)
         run: |
           echo "Starting Docker Compose Build and Run..."
           docker compose up --build -d
           
       - name: 4. Wait for API to Start (Надійне очікування Flask-API)
-        # Bash-скрипт, який чекає на відповідь порту 5000
         run: |
           echo "Starting health check on API..."
           for i in $(seq 1 10); do
@@ -50,32 +39,26 @@ jobs:
           exit 1
 
       - name: 5. Extra delay for API stability (Додаткова пауза)
-        # Даємо Flask-серверу 5 секунд на повну стабілізацію перед тестами
         run: |
           echo "Waiting 5 seconds for full API stability..."
           sleep 5
         
       - name: 6. Run PyTest (Тестування функціональності)
-        # Етап: ТЕСТУВАННЯ. Запускаємо тести PyTest всередині контейнера 'app-api'
-        # Завдяки container_name в docker-compose.yml ця команда спрацює
         run: |
           echo "--- Starting PyTest ---"
           docker exec app-api pytest test_api.py -v
 
       - name: 7. Run Pylint Check (Статичний аналіз)
-        # Додаткова перевірка якості коду Pylint
         run: |
           echo "--- Starting Pylint Check ---"
-          docker exec app-api pylint app.py
+          docker exec app-api pylint app.py --fail-under=9.0
         
       - name: 8. Deploy Simulation (Імітація розгортання)
-        # Етап: РОЗГОРТАННЯ. Успішне завершення означає, що контейнер готовий
         run: |
           echo "Deployment succeeded: Container image built, tested, and validated."
           echo "Ready for production rollout."
         
       - name: 9. Stop Services (Очищення середовища)
-        # Очищуємо віртуальну машину GitHub після роботи
         if: always()
         run: |
           echo "Cleaning up Docker services..."

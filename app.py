@@ -6,7 +6,6 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-# Глобальні змінні для зберігання завдань
 tasks = []
 task_id_counter = 1
 
@@ -54,7 +53,5 @@ def update_task(task_id):
 
     return jsonify(task), 200
 
-# Запускаємо додаток на порту 5000
 if __name__ == '__main__':
-    # У CI/CD середовищі Docker зазвичай ігнорує debug=True
     app.run(host='0.0.0.0', port=5000)

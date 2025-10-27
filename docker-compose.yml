@@ -1,24 +1,18 @@
-# Використовуємо версію 3.8 для сумісності
 version: '3.8'
 
 services:
-  # Основний сервіс API з Flask (ПЗ)
   app:
     build: .
-    # Критично: Прокидаємо порт для зовнішнього доступу (для тестів у CI/CD)
     ports:
       - "5000:5000"
-    # Критично: Явно вказуємо ім'я контейнера, щоб PyTest його знайшов
     container_name: app-api
-    hostname: app-api # Допомагає у мережі Docker
+    hostname: app-api 
     
-    # Залежність: запускати тільки після az_simulator
     depends_on:
       - az_simulator
     networks:
       - app_network
 
-  # Сервіс-заглушка для апаратної зони (АЗ)
   az_simulator:
     image: nginx:alpine
     container_name: az-simulator
@@ -27,7 +21,6 @@ services:
       - app_network
     command: ["nginx", "-g", "daemon off;"]
 
-# Створюємо спільну мережу для зв'язку між контейнерами
 networks:
   app_network:
     driver: bridge
