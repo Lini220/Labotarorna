@@ -1,0 +1,25 @@
+#Об'єднує 2 контейнера (ПЗ) та (АЗ)
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "5000:5000"
+    hostname: app-api
+
+    depends_on:
+      - az_simulator
+    networks:
+      - app_network
+
+  az_simulator:
+    image: nginx:alpine
+    hostname: hw-simulator
+    networks:
+      - app_network
+    command: ["nginx", "-g", "daemon off;"]
+
+networks:
+  app_network:
+    driver: bridge

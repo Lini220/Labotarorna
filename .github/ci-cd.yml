@@ -1,0 +1,58 @@
+# Назва конвеєра, яку ти побачиш у GitHub Actions
+name: Task API CI/CD Pipeline
+
+# Коли запускати цей конвеєр?
+on:
+  # Запускати при кожному push (завантаженні коду) на гілку main
+  push:
+    branches:
+      - main
+  # Дозволяє запустити конвеєр вручну
+  workflow_dispatch:
+
+# Наші автоматичні завдання
+jobs:
+  build_test_and_deploy:
+    # Запускати на віртуальній машині з Linux
+    runs-on: ubuntu-latest
+    
+    # Кроки конвеєра:
+    steps:
+      - name: 1. Checkout Code (Отримання коду)
+        # Стандартна дія: завантажити код з репозиторію
+        uses: actions/checkout@v4
+
+      - name: 2. Setup Docker (Підготовка Docker)
+        # Нам потрібен Docker Compose для запуску ПЗ+АЗ
+        uses: docker/setup-buildx-action@v3
+        
+      - name: 3. Build & Run Services (Збірка та запуск ПЗ та АЗ)
+        # Етап: ЗБІРКА. Збираємо та запускаємо наші контейнери у фоновому режимі
+        run: docker-compose up --build -d
+        
+      - name: 4. Wait for API to Start (Чекаємо запуску Flask-API)
+        # Це критично: PyTest не може запуститися, поки Flask-сервер не готовий
+        uses: jakejarvis/wait-action@master
+        with:
+          # Чекаємо, поки порт 5000 стане доступним
+          host: localhost:5000
+          timeout: 60s
+          
+      - name: 5. Run PyTest (Тестування функціональності)
+        # Етап: ТЕСТУВАННЯ. Запускаємо тести PyTest всередині контейнера 'app-api'
+        run: docker exec app-api pytest test_api.py -v
+        
+      - name: 6. Run Pylint Check (Статичний аналіз)
+        # Додаткова перевірка якості коду Pylint
+        run: docker exec app-api pylint app.py
+        
+      - name: 7. Deploy Simulation (Імітація розгортання)
+        # Етап: РОЗГОРТАННЯ. Успішне завершення означає, що контейнер готовий
+        run: |
+          echo "Deployment succeeded: Container image built, tested, and validated."
+          echo "Ready for production rollout."
+        
+      - name: 8. Stop Services (Очищення середовища)
+        # Очищуємо віртуальну машину GitHub після роботи
+        if: always()
+        run: docker-compose down
