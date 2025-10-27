@@ -1,31 +1,32 @@
-# Task API - A simple web service for managing tasks.
+"""
+Task API - A simple web service for managing tasks.
+"""
 
 from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
 tasks = []
-# ВИПРАВЛЕНО: Pylint вимагає UPPER_CASE для глобальних констант
-TASK_ID_COUNTER = 1
+task_id_counter = 1
 
 @app.route('/api/tasks', methods=['GET', 'POST'])
 def handle_tasks():
     """
-    Handle GET (read all tasks) and POST (create new task) requests.
+    Обробляє GET (читання всіх завдань) та POST (створення нового завдання) запити.
     """
-    global TASK_ID_COUNTER # Змінено з task_id_counter
+    global task_id_counter
 
     if request.method == 'POST':
         if not request.json or 'title' not in request.json:
             return jsonify({"error": "Missing title"}), 400
 
         new_task = {
-            'id': TASK_ID_COUNTER, # Змінено з task_id_counter
+            'id': task_id_counter,
             'title': request.json['title'],
             'done': request.json.get('done', False)
         }
         tasks.append(new_task)
-        TASK_ID_COUNTER += 1 # Змінено з task_id_counter
+        task_id_counter += 1
         return jsonify(new_task), 201
 
     return jsonify(tasks), 200
@@ -33,7 +34,7 @@ def handle_tasks():
 @app.route('/api/tasks/<int:task_id>', methods=['PUT'])
 def update_task(task_id):
     """
-    Update an existing task (by ID) using PUT request.
+    Оновлює існуюче завдання (за ID) через PUT запит.
     """
     task = None
     for t in tasks:
@@ -53,4 +54,4 @@ def update_task(task_id):
     return jsonify(task), 200
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(host='0.0.0.0', port=5000)
