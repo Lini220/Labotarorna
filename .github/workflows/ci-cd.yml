@@ -28,31 +28,55 @@ jobs:
         
       - name: 3. Build & Run Services (Збірка та запуск ПЗ та АЗ)
         # Етап: ЗБІРКА. Збираємо та запускаємо наші контейнери у фоновому режимі
-        run: docker-compose up --build -d
-        
-      - name: 4. Wait for API to Start (Чекаємо запуску Flask-API)
-        # Це критично: PyTest не може запуститися, поки Flask-сервер не готовий
-        uses: jakejarvis/wait-action@master
-        with:
-          # Чекаємо, поки порт 5000 стане доступним
-          host: localhost:5000
-          timeout: 60s
+        # Використовуємо сучасну команду "docker compose" (без дефіса)
+        run: |
+          echo "Starting Docker Compose Build and Run..."
+          docker compose up --build -d
           
-      - name: 5. Run PyTest (Тестування функціональності)
+      - name: 4. Wait for API to Start (Надійне очікування Flask-API)
+        # Bash-скрипт, який чекає на відповідь порту 5000
+        run: |
+          echo "Starting health check on API..."
+          for i in $(seq 1 10); do
+            response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/api/tasks || true)
+            if [ "$response" -eq 200 ]; then
+              echo "API is ready on port 5000!"
+              exit 0
+            fi
+            echo "Attempt $i: Waiting for API to be ready on port 5000 (status: $response)..."
+            sleep 5
+          done
+          echo "API failed to start within 50 seconds."
+          exit 1
+
+      - name: 5. Extra delay for API stability (Додаткова пауза)
+        # Даємо Flask-серверу 5 секунд на повну стабілізацію перед тестами
+        run: |
+          echo "Waiting 5 seconds for full API stability..."
+          sleep 5
+        
+      - name: 6. Run PyTest (Тестування функціональності)
         # Етап: ТЕСТУВАННЯ. Запускаємо тести PyTest всередині контейнера 'app-api'
-        run: docker exec app-api pytest test_api.py -v
-        
-      - name: 6. Run Pylint Check (Статичний аналіз)
+        # Завдяки container_name в docker-compose.yml ця команда спрацює
+        run: |
+          echo "--- Starting PyTest ---"
+          docker exec app-api pytest test_api.py -v
+
+      - name: 7. Run Pylint Check (Статичний аналіз)
         # Додаткова перевірка якості коду Pylint
-        run: docker exec app-api pylint app.py
+        run: |
+          echo "--- Starting Pylint Check ---"
+          docker exec app-api pylint app.py
         
-      - name: 7. Deploy Simulation (Імітація розгортання)
+      - name: 8. Deploy Simulation (Імітація розгортання)
         # Етап: РОЗГОРТАННЯ. Успішне завершення означає, що контейнер готовий
         run: |
           echo "Deployment succeeded: Container image built, tested, and validated."
           echo "Ready for production rollout."
         
-      - name: 8. Stop Services (Очищення середовища)
+      - name: 9. Stop Services (Очищення середовища)
         # Очищуємо віртуальну машину GitHub після роботи
         if: always()
-        run: docker-compose down
+        run: |
+          echo "Cleaning up Docker services..."
+          docker compose down

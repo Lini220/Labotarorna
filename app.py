@@ -6,13 +6,14 @@ from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
+# Глобальні змінні для зберігання завдань
 tasks = []
 task_id_counter = 1
 
 @app.route('/api/tasks', methods=['GET', 'POST'])
 def handle_tasks():
     """
-    Handle GET (read all tasks) and POST (create new task) requests.
+    Обробляє GET (читання всіх завдань) та POST (створення нового завдання) запити.
     """
     global task_id_counter
 
@@ -34,7 +35,7 @@ def handle_tasks():
 @app.route('/api/tasks/<int:task_id>', methods=['PUT'])
 def update_task(task_id):
     """
-    Update an existing task (by ID) using PUT request.
+    Оновлює існуюче завдання (за ID) через PUT запит.
     """
     task = None
     for t in tasks:
@@ -53,5 +54,7 @@ def update_task(task_id):
 
     return jsonify(task), 200
 
+# Запускаємо додаток на порту 5000
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    # У CI/CD середовищі Docker зазвичай ігнорує debug=True
+    app.run(host='0.0.0.0', port=5000)
